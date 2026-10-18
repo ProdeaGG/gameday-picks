@@ -1,0 +1,30 @@
+version: '3.8'
+
+services:
+  gameday-pickem:
+    image: ghcr.io/CHANGE_ME_GITHUB_USER/gameday-pickem:latest
+    container_name: gameday-pickem
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    volumes:
+      # Persistent SQLite database storage on CasaOS host
+      - /DATA/AppData/gameday-pickem/data:/app/data
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - DATABASE_PATH=/app/data/pickem.db
+      - JWT_SECRET=change-this-to-a-long-random-secret-string-in-production
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true"
+
+  watchtower:
+    image: containrrr/watchtower:latest
+    container_name: gameday-watchtower
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    command: --interval 300 --cleanup --label-enable
+    environment:
+      - WATCHTOWER_CLEANUP=true
+      - WATCHTOWER_POLL_INTERVAL=300

@@ -1,0 +1,18 @@
+version: '3.8'
+
+services:
+  gameday-pickem:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: gameday-pickem
+    restart: unless-stopped
+    ports:
+      - '3000:3000'
+    environment:
+      - NODE_ENV=production
+      - TZ=America/New_York
+      - DATABASE_URL=file:/app/data/pickem.db
+      - JWT_SECRET=${JWT_SECRET:-change-this-secret-in-production-gameday-2026}
+    volumes:
+      - ./data:/app/data

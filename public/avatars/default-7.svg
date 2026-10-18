@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" shape-rendering="crispEdges">
+  <rect width="64" height="64" fill="#1e293b"/>
+  <!-- Black Ref Cap with White Piping -->
+  <rect x="20" y="14" width="24" height="10" fill="#0f172a"/>
+  <rect x="31" y="14" width="2" height="10" fill="#ffffff"/>
+  <rect x="18" y="22" width="28" height="4" fill="#0f172a"/>
+  <!-- Face -->
+  <rect x="22" y="26" width="20" height="14" fill="#fed7aa"/>
+  <rect x="25" y="30" width="3" height="3" fill="#0f172a"/>
+  <rect x="36" y="30" width="3" height="3" fill="#0f172a"/>
+  <!-- Silver Whistle -->
+  <rect x="30" y="36" width="4" height="4" fill="#cbd5e1"/>
+  <rect x="32" y="38" width="4" height="2" fill="#94a3b8"/>
+  <!-- Black & White Striped Jersey -->
+  <rect x="14" y="40" width="36" height="20" fill="#0f172a"/>
+  <rect x="18" y="40" width="4" height="20" fill="#ffffff"/>
+  <rect x="26" y="40" width="4" height="20" fill="#ffffff"/>
+  <rect x="34" y="40" width="4" height="20" fill="#ffffff"/>
+  <rect x="42" y="40" width="4" height="20" fill="#ffffff"/>
+</svg>
