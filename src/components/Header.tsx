@@ -129,10 +129,15 @@ export default function Header({ currentUser, groupName }: HeaderProps) {
 
           {/* Right section: Patch Version Badge & User Profile */}
           <div className="flex items-center gap-2 sm:gap-3">
-            {/* Version Badge (from package.json via /api/version) */}
-            <div className="px-2 py-0.5 rounded-full bg-slate-800/80 border border-slate-700 text-[10px] font-mono text-slate-300 shadow-sm flex items-center gap-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-              <span>{currentVersion}</span>
+            {/* Version Badge & Creator Credit */}
+            <div className="flex flex-col items-end">
+              <div className="px-2 py-0.5 rounded-full bg-slate-800/80 border border-slate-700 text-[10px] font-mono text-slate-300 shadow-sm flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                <span>{currentVersion}</span>
+              </div>
+              <span className="text-[9px] text-slate-500 font-medium tracking-tight mt-0.5">
+                Created by <strong className="text-slate-400 font-semibold">ProdeaGG</strong>
+              </span>
             </div>
 
             {currentUser ? (

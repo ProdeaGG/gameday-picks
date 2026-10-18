@@ -174,10 +174,15 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen bg-[#080d1a] flex flex-col justify-center items-center p-4 relative">
-      {/* Top-Right Version Badge */}
-      <div className="fixed top-4 right-4 z-30 px-2.5 py-1 rounded-full bg-slate-900/90 border border-slate-700 text-[11px] font-mono text-slate-300 shadow-lg flex items-center gap-1.5">
-        <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-        <span>{appVersion}</span>
+      {/* Top-Right Version Badge & Creator Credit */}
+      <div className="fixed top-4 right-4 z-30 flex flex-col items-end">
+        <div className="px-2.5 py-1 rounded-full bg-slate-900/90 border border-slate-700 text-[11px] font-mono text-slate-300 shadow-lg flex items-center gap-1.5">
+          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+          <span>{appVersion}</span>
+        </div>
+        <span className="text-[9px] text-slate-500 font-medium tracking-tight mt-1">
+          Created by <strong className="text-slate-400 font-semibold">ProdeaGG</strong>
+        </span>
       </div>
 
       {/* Brand Header */}
