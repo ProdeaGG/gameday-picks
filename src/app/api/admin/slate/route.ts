@@ -13,6 +13,7 @@ import {
   computeDynamicLockAndWindow,
   computeWednesdayAdminDeadlineUtc,
   getDefaultWeekLabel,
+  sortGamesChronologically,
   SeasonStage,
 } from '@/lib/time';
 import { wipeSandboxData } from '@/db/seed';
@@ -64,9 +65,10 @@ export async function GET(req: NextRequest) {
     : activeWeek?.week_number ?? 1;
 
   const savedWeek = allWeeks.find((w) => w.week_number === wkNum) || null;
-  const savedWeekGames = savedWeek
+  const rawSavedWeekGames = savedWeek
     ? allDbGames.filter((g) => g.week_id === savedWeek.id)
     : [];
+  const savedWeekGames = sortGamesChronologically(rawSavedWeekGames);
 
   const candidatePool = await fetchEspnScoreboardForSlate({
     weekNumber: wkNum,

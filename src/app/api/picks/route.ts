@@ -3,7 +3,8 @@ import { getCurrentUser } from '@/lib/auth';
 import { db, ensureDbInitialized } from '@/db';
 import { groups, groupMembers, weeks, games, picks } from '@/db/schema';
 import { eq, and, desc } from 'drizzle-orm';
-import { isWeekPastCutoff } from '@/lib/time';
+import { isWeekPastCutoff, sortGamesChronologically } from '@/lib/time';
+import { syncLiveScoresFromEspnIfStale } from '@/lib/espn';
 
 export const dynamic = 'force-dynamic';
 
@@ -40,15 +41,18 @@ export async function GET(req: NextRequest) {
     });
   }
 
-  const weekGames = await db
+  // If week is not past cutoff, check ESPN for kickoff time shifts or score updates (throttled to 5 mins)
+  if (!isWeekPastCutoff(activeWeek)) {
+    await syncLiveScoresFromEspnIfStale(5 * 60 * 1000);
+  }
+
+  const rawWeekGames = await db
     .select()
     .from(games)
     .where(eq(games.week_id, activeWeek.id));
 
-  // Sort games by kickoff_utc
-  weekGames.sort(
-    (a, b) => new Date(a.kickoff_utc).getTime() - new Date(b.kickoff_utc).getTime()
-  );
+  // Sort games chronologically (confirmed kickoff times in order, TBD games at end of day)
+  const weekGames = sortGamesChronologically(rawWeekGames);
 
   const userPicks = await db
     .select()

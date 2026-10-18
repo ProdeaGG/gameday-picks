@@ -728,21 +728,36 @@ export async function syncLiveScoresFromEspn(): Promise<{ updatedGames: number }
             eg.away_team.toLowerCase() === dbGame.away_team.toLowerCase())
       );
 
-      if (match && (match.status !== dbGame.status || match.home_score !== dbGame.home_score)) {
-        await db
-          .update(games)
-          .set({
-            home_score: match.home_score,
-            away_score: match.away_score,
-            status: match.status,
-            winner_team: match.winner_team,
-          })
-          .where(eq(games.id, dbGame.id));
+      if (match) {
+        const timeShifted = match.kickoff_utc !== dbGame.kickoff_utc;
+        const statusChanged = match.status !== dbGame.status;
+        const scoreChanged =
+          match.home_score !== dbGame.home_score || match.away_score !== dbGame.away_score;
+        const oddsChanged =
+          match.odds_display !== dbGame.odds_display ||
+          match.spread_home !== dbGame.spread_home ||
+          match.over_under !== dbGame.over_under;
 
-        updatedGames++;
+        if (timeShifted || statusChanged || scoreChanged || oddsChanged) {
+          await db
+            .update(games)
+            .set({
+              kickoff_utc: match.kickoff_utc,
+              odds_display: match.odds_display,
+              spread_home: match.spread_home,
+              over_under: match.over_under,
+              home_score: match.home_score,
+              away_score: match.away_score,
+              status: match.status,
+              winner_team: match.winner_team,
+            })
+            .where(eq(games.id, dbGame.id));
 
-        if (match.status === 'FINAL' && match.winner_team) {
-          await gradePicksForFinalGame(dbGame.id);
+          updatedGames++;
+
+          if (match.status === 'FINAL' && match.winner_team) {
+            await gradePicksForFinalGame(dbGame.id);
+          }
         }
       }
     }
@@ -750,3 +765,26 @@ export async function syncLiveScoresFromEspn(): Promise<{ updatedGames: number }
 
   return { updatedGames };
 }
+
+let lastEspnSyncMs = 0;
+
+/**
+ * Throttled live score and kickoff time syncer.
+ * Automatically runs if more than `maxAgeMs` (default 5 minutes) has elapsed since the last sync.
+ */
+export async function syncLiveScoresFromEspnIfStale(
+  maxAgeMs = 5 * 60 * 1000
+): Promise<{ updatedGames: number }> {
+  const now = Date.now();
+  if (now - lastEspnSyncMs < maxAgeMs) {
+    return { updatedGames: 0 };
+  }
+  lastEspnSyncMs = now;
+  try {
+    return await syncLiveScoresFromEspn();
+  } catch (err) {
+    console.error('syncLiveScoresFromEspnIfStale error:', err);
+    return { updatedGames: 0 };
+  }
+}
+

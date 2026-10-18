@@ -536,7 +536,10 @@ export default function PickFlow({ groupId, onPicksLocked }: PickFlowProps) {
             <span className="font-bold text-amber-400 uppercase tracking-wider">
               Game {cardDeckIndex + 1} of {totalGames}
             </span>
-            <span>{formatEasternKickoff(currentCardGame.kickoff_utc)}</span>
+            <span className="inline-flex items-center gap-1.5 font-medium text-slate-300">
+              <Clock className="w-3.5 h-3.5 text-amber-400/90" />
+              <span>{formatEasternKickoff(currentCardGame.kickoff_utc)}</span>
+            </span>
           </div>
 
           {/* Big Matchup Card */}

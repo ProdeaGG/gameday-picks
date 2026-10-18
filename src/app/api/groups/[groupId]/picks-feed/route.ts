@@ -3,7 +3,7 @@ import { getCurrentUser } from '@/lib/auth';
 import { db, ensureDbInitialized } from '@/db';
 import { groups, groupMembers, users, weeks, games, picks } from '@/db/schema';
 import { eq, and, desc } from 'drizzle-orm';
-import { isWeekPastCutoff } from '@/lib/time';
+import { isWeekPastCutoff, sortGamesChronologically } from '@/lib/time';
 
 export const dynamic = 'force-dynamic';
 
@@ -41,14 +41,12 @@ export async function GET(
     });
   }
 
-  const weekGames = await db
+  const rawWeekGames = await db
     .select()
     .from(games)
     .where(eq(games.week_id, activeWeek.id));
 
-  weekGames.sort(
-    (a, b) => new Date(a.kickoff_utc).getTime() - new Date(b.kickoff_utc).getTime()
-  );
+  const weekGames = sortGamesChronologically(rawWeekGames);
 
   // Fetch all group members
   const members = await db

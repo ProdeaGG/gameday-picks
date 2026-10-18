@@ -32,6 +32,13 @@ const etDisplayFormatter = new Intl.DateTimeFormat('en-US', {
   hour12: true,
 });
 
+const etDateOnlyFormatter = new Intl.DateTimeFormat('en-US', {
+  timeZone: 'America/New_York',
+  weekday: 'short',
+  month: 'short',
+  day: 'numeric',
+});
+
 export function getEasternDateParts(dateInput: Date | string | number): EasternDateParts {
   const date = dateInput instanceof Date ? dateInput : new Date(dateInput);
   const parts = etPartsFormatter.formatToParts(date);
@@ -184,12 +191,74 @@ export function computeDynamicLockAndWindow(
   };
 }
 
+/**
+ * Detects whether a game's kickoff time has not yet been finalized by ESPN (TBD).
+ * ESPN sets unannounced college kickoff times to 12:00:00 AM (00:00:00) in local/ET time.
+ */
+export function isKickoffTimeTbd(utcIso: string | Date): boolean {
+  if (!utcIso) return true;
+  try {
+    const parts = getEasternDateParts(utcIso);
+    return parts.hour === 0 && parts.minute === 0;
+  } catch {
+    return true;
+  }
+}
+
 export function formatEasternKickoff(utcIso: string): string {
   try {
-    return `${etDisplayFormatter.format(new Date(utcIso))} ET`;
+    const d = new Date(utcIso);
+    if (isNaN(d.getTime())) return 'TBD';
+
+    const parts = getEasternDateParts(d);
+    // 12:00 AM (00:00:00 ET) is ESPN's universal placeholder for unannounced / TBD kickoff times
+    if (parts.hour === 0 && parts.minute === 0) {
+      return `${etDateOnlyFormatter.format(d)} • TBD`;
+    }
+
+    return `${etDisplayFormatter.format(d)} ET`;
   } catch {
-    return utcIso;
+    return 'TBD';
   }
+}
+
+/**
+ * Sorts games chronologically by Eastern calendar date and kickoff time.
+ * Games with confirmed start times on the same date are sorted chronologically ascending;
+ * games with unannounced (TBD) times appear after confirmed-time games on that date.
+ */
+export function sortGamesChronologically<T extends { kickoff_utc: string; hype_score?: number | null }>(
+  gamesList: T[]
+): T[] {
+  return [...gamesList].sort((a, b) => {
+    const aParts = getEasternDateParts(a.kickoff_utc);
+    const bParts = getEasternDateParts(b.kickoff_utc);
+
+    // 1. Compare calendar day (year, month, day)
+    const aDayVal = aParts.year * 10000 + aParts.month * 100 + aParts.day;
+    const bDayVal = bParts.year * 10000 + bParts.month * 100 + bParts.day;
+    if (aDayVal !== bDayVal) {
+      return aDayVal - bDayVal;
+    }
+
+    // 2. Same day: check if one or both are TBD (12:00 AM ET placeholder)
+    const aIsTbd = aParts.hour === 0 && aParts.minute === 0;
+    const bIsTbd = bParts.hour === 0 && bParts.minute === 0;
+
+    // Both have confirmed kickoff times: sort ascending by time
+    if (!aIsTbd && !bIsTbd) {
+      return new Date(a.kickoff_utc).getTime() - new Date(b.kickoff_utc).getTime();
+    }
+
+    // Confirmed kickoff times appear before TBD games on the same day
+    if (!aIsTbd && bIsTbd) return -1;
+    if (aIsTbd && !bIsTbd) return 1;
+
+    // Both are TBD: sort by hype score descending
+    const aHype = Number(a.hype_score ?? 0);
+    const bHype = Number(b.hype_score ?? 0);
+    return bHype - aHype;
+  });
 }
 
 export function isWeekPastCutoff(week: {
