@@ -38,6 +38,24 @@ export default function LoginPage() {
   const [forgotNewPass, setForgotNewPass] = useState('');
   const [forgotError, setForgotError] = useState<string | null>(null);
   const [forgotSuccess, setForgotSuccess] = useState<string | null>(null);
+  const [appVersion, setAppVersion] = useState<string>('...');
+
+  React.useEffect(() => {
+    const fetchVersion = async () => {
+      try {
+        const res = await fetch('/api/version', { cache: 'no-store' });
+        if (res.ok) {
+          const data = await res.json();
+          setAppVersion(`v${data.version}`);
+        }
+      } catch {
+        // ignore
+      }
+    };
+    fetchVersion();
+    const interval = setInterval(fetchVersion, 30000);
+    return () => clearInterval(interval);
+  }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -155,7 +173,13 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#080d1a] flex flex-col justify-center items-center p-4">
+    <div className="min-h-screen bg-[#080d1a] flex flex-col justify-center items-center p-4 relative">
+      {/* Top-Right Version Badge */}
+      <div className="fixed top-4 right-4 z-30 px-2.5 py-1 rounded-full bg-slate-900/90 border border-slate-700 text-[11px] font-mono text-slate-300 shadow-lg flex items-center gap-1.5">
+        <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+        <span>{appVersion}</span>
+      </div>
+
       {/* Brand Header */}
       <div className="text-center mb-8">
         <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-tr from-amber-600 to-amber-400 p-2 shadow-2xl shadow-amber-500/20 mb-3">
