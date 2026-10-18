@@ -14,6 +14,7 @@ import {
   Calendar,
   Lock,
   ListOrdered,
+  Share2,
 } from 'lucide-react';
 
 interface GroupDetailData {
@@ -91,12 +92,29 @@ export default function GroupWorkspacePage() {
     return () => window.removeEventListener('gameday-sandbox-updated', handler);
   }, [fetchGroup]);
 
-  const copyInviteLink = () => {
+  const copyInviteLink = async () => {
     if (!groupData) return;
     const url = `${window.location.origin}/join/${groupData.group.invite_code}`;
-    navigator.clipboard.writeText(url);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    const shareText = `🏈 Join my College GameDay Pick'em group and lock in your winners for this week! 👇\n${url}`;
+
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: `College GameDay Pick'em - ${groupData.group.name}`,
+          text: `🏈 Join my College GameDay Pick'em group and lock in your winners for this week! 👇`,
+          url: url,
+        });
+        return;
+      } catch (err) {
+        // User cancelled or share failed, fallback to clipboard
+      }
+    }
+
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(shareText);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
   };
 
   if (loading || !groupData) {
@@ -145,17 +163,17 @@ export default function GroupWorkspacePage() {
           <div className="flex items-center gap-2">
             <button
               onClick={copyInviteLink}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold border border-slate-700 transition-colors"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold border border-slate-700 transition-colors shadow-sm"
             >
               {copied ? (
                 <>
                   <Check className="w-3.5 h-3.5 text-emerald-400" />
-                  <span className="text-emerald-400">Copied!</span>
+                  <span className="text-emerald-400">Copied to Clipboard!</span>
                 </>
               ) : (
                 <>
-                  <Copy className="w-3.5 h-3.5 text-amber-400" />
-                  <span>Invite Link: {groupData.group.invite_code}</span>
+                  <Share2 className="w-3.5 h-3.5 text-amber-400" />
+                  <span>Share Invite ({groupData.group.invite_code})</span>
                 </>
               )}
             </button>
