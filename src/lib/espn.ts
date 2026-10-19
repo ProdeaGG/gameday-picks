@@ -1,7 +1,13 @@
 import { db, ensureDbInitialized } from '@/db';
 import { games, picks, weeks } from '@/db/schema';
 import { eq } from 'drizzle-orm';
-import { isEligibleGameForStage, SeasonStage } from './time';
+import {
+  isEligibleGameForStage,
+  SeasonStage,
+  getEasternDateParts,
+  easternWallTimeToUtc,
+  computeDynamicLockAndWindow,
+} from './time';
 
 const SEC_TEAMS = new Set([
   'alabama',
@@ -244,6 +250,19 @@ export async function fetchEspnScoreboardForSlate(options: {
         winnerTeam = homeScore > awayScore ? homeTeam : awayTeam;
       }
 
+      const isTbd =
+        competition.timeValid === false ||
+        Boolean(ev.status?.type?.detail?.toUpperCase().includes('TBD')) ||
+        Boolean(competition.status?.type?.shortDetail?.toUpperCase().includes('TBD'));
+
+      let finalKickoffIso: string;
+      if (isTbd) {
+        const dParts = getEasternDateParts(kickoffUtc);
+        finalKickoffIso = easternWallTimeToUtc(dParts.year, dParts.month, dParts.day, 0, 0, 0).toISOString();
+      } else {
+        finalKickoffIso = new Date(kickoffUtc).toISOString();
+      }
+
       parsedGames.push({
         external_game_id: `espn-${ev.id}`,
         home_team: homeTeam,
@@ -256,7 +275,7 @@ export async function fetchEspnScoreboardForSlate(options: {
         away_rank: awayRank,
         is_sec_matchup: isSecMatchup,
         hype_score: hypeScore,
-        kickoff_utc: new Date(kickoffUtc).toISOString(),
+        kickoff_utc: finalKickoffIso,
         spread_home: spreadHome,
         over_under: overUnder,
         odds_display: oddsDisplay,
@@ -720,12 +739,18 @@ export async function syncLiveScoresFromEspn(): Promise<{ updatedGames: number }
 
     if (source !== 'ESPN_LIVE') continue;
 
+    let weekKickoffsUpdated = false;
+
     for (const dbGame of weekGames) {
       const match = espnGames.find(
         (eg) =>
           eg.external_game_id === dbGame.external_game_id ||
           (eg.home_team.toLowerCase() === dbGame.home_team.toLowerCase() &&
-            eg.away_team.toLowerCase() === dbGame.away_team.toLowerCase())
+            eg.away_team.toLowerCase() === dbGame.away_team.toLowerCase()) ||
+          (eg.home_team.toLowerCase().includes(dbGame.home_team.toLowerCase()) &&
+            eg.away_team.toLowerCase().includes(dbGame.away_team.toLowerCase())) ||
+          (dbGame.home_team.toLowerCase().includes(eg.home_team.toLowerCase()) &&
+            dbGame.away_team.toLowerCase().includes(eg.away_team.toLowerCase()))
       );
 
       if (match) {
@@ -739,6 +764,9 @@ export async function syncLiveScoresFromEspn(): Promise<{ updatedGames: number }
           match.over_under !== dbGame.over_under;
 
         if (timeShifted || statusChanged || scoreChanged || oddsChanged) {
+          if (timeShifted) {
+            weekKickoffsUpdated = true;
+          }
           await db
             .update(games)
             .set({
@@ -760,6 +788,23 @@ export async function syncLiveScoresFromEspn(): Promise<{ updatedGames: number }
           }
         }
       }
+    }
+
+    if (weekKickoffsUpdated) {
+      const refreshedGames = await db
+        .select()
+        .from(games)
+        .where(eq(games.week_id, wk.id));
+      const kickoffs = refreshedGames.map((g) => g.kickoff_utc);
+      const { lockTimeUtc, windowEndUtc } = computeDynamicLockAndWindow(
+        kickoffs,
+        wk.stage as SeasonStage,
+        false
+      );
+      await db
+        .update(weeks)
+        .set({ lock_time_utc: lockTimeUtc, window_end_utc: windowEndUtc })
+        .where(eq(weeks.id, wk.id));
     }
   }
 

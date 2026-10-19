@@ -550,8 +550,12 @@ export default function PickFlow({ groupId, onPicksLocked }: PickFlowProps) {
               </div>
             )}
 
-            <div className="text-center mb-6">
-              <span className="text-xs font-mono text-amber-400 font-bold">
+            <div className="text-center mb-6 flex flex-col items-center gap-1.5">
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-950/80 border border-slate-800 text-xs font-bold text-slate-200 shadow-inner">
+                <Clock className="w-3.5 h-3.5 text-amber-400" />
+                <span>{formatEasternKickoff(currentCardGame.kickoff_utc)}</span>
+              </div>
+              <span className="text-[11px] font-mono text-amber-400 font-semibold tracking-wide">
                 {currentCardGame.odds_display}
               </span>
             </div>

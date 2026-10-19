@@ -41,10 +41,8 @@ export async function GET(req: NextRequest) {
     });
   }
 
-  // If week is not past cutoff, check ESPN for kickoff time shifts or score updates (throttled to 5 mins)
-  if (!isWeekPastCutoff(activeWeek)) {
-    await syncLiveScoresFromEspnIfStale(5 * 60 * 1000);
-  }
+  // Check ESPN for live score updates or kickoff time shifts (throttled to 60s)
+  await syncLiveScoresFromEspnIfStale(60 * 1000);
 
   const rawWeekGames = await db
     .select()
