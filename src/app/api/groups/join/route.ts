@@ -4,6 +4,49 @@ import { db, ensureDbInitialized } from '@/db';
 import { groups, groupMembers } from '@/db/schema';
 import { eq, sql } from 'drizzle-orm';
 
+export const dynamic = 'force-dynamic';
+
+export async function GET(req: NextRequest) {
+  await ensureDbInitialized();
+  const { searchParams } = new URL(req.url);
+  const code = (searchParams.get('code') || '').trim().toUpperCase();
+
+  if (!code) {
+    return NextResponse.json({ error: 'Invite code required' }, { status: 400 });
+  }
+
+  const groupRows = await db
+    .select()
+    .from(groups)
+    .where(sql`upper(${groups.invite_code}) = ${code}`)
+    .limit(1);
+
+  const group = groupRows[0];
+  if (!group) {
+    return NextResponse.json({ error: 'No group found with that invite code' }, { status: 404 });
+  }
+
+  const members = await db
+    .select()
+    .from(groupMembers)
+    .where(eq(groupMembers.group_id, group.id));
+
+  const currentUser = await getCurrentUser();
+  const isMember = currentUser ? members.some((m) => m.user_id === currentUser.id) : false;
+
+  return NextResponse.json({
+    group: {
+      id: group.id,
+      name: group.name,
+      inviteCode: group.invite_code,
+      memberCount: members.length,
+      maxMembers: 8,
+      isFull: members.length >= 8,
+      isMember,
+    },
+  });
+}
+
 export async function POST(req: NextRequest) {
   await ensureDbInitialized();
   const currentUser = await getCurrentUser();

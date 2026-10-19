@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import React, { useState, useEffect, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Trophy, Lock, User, KeyRound, HelpCircle, ShieldCheck, ArrowRight, Sparkles } from 'lucide-react';
 import AvatarPickerModal from '@/components/AvatarPickerModal';
 
@@ -12,7 +12,20 @@ const SECURITY_QUESTIONS = [
 ];
 
 export default function LoginPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-[#080d1a]" />}>
+      <LoginForm />
+    </Suspense>
+  );
+}
+
+function LoginForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirectParam = searchParams.get('redirect');
+  const joinParam = searchParams.get('join');
+  const [pendingInviteCode, setPendingInviteCode] = useState<string | null>(joinParam);
+
   const [mode, setMode] = useState<'LOGIN' | 'SIGNUP'>('LOGIN');
 
   // Form states
@@ -40,7 +53,28 @@ export default function LoginPage() {
   const [forgotSuccess, setForgotSuccess] = useState<string | null>(null);
   const [appVersion, setAppVersion] = useState<string>('...');
 
-  React.useEffect(() => {
+  useEffect(() => {
+    try {
+      const code = joinParam || localStorage.getItem('pending_invite_code');
+      if (code) {
+        setPendingInviteCode(code);
+        localStorage.setItem('pending_invite_code', code);
+      }
+    } catch {
+      // ignore
+    }
+  }, [joinParam]);
+
+  const getRedirectDestination = () => {
+    if (redirectParam) return redirectParam;
+    try {
+      const code = pendingInviteCode || localStorage.getItem('pending_invite_code');
+      if (code) return `/join/${code}`;
+    } catch {}
+    return '/groups';
+  };
+
+  useEffect(() => {
     const fetchVersion = async () => {
       try {
         const res = await fetch('/api/version', { cache: 'no-store' });
@@ -72,7 +106,7 @@ export default function LoginPage() {
       if (!res.ok) {
         setError(data.error || 'Failed to log in');
       } else {
-        router.push('/groups');
+        router.push(getRedirectDestination());
         router.refresh();
       }
     } catch {
@@ -105,7 +139,7 @@ export default function LoginPage() {
       if (!res.ok) {
         setError(data.error || 'Failed to create account');
       } else {
-        router.push('/groups');
+        router.push(getRedirectDestination());
         router.refresh();
       }
     } catch {
@@ -200,6 +234,15 @@ export default function LoginPage() {
 
       {/* Main Card */}
       <div className="w-full max-w-md bg-slate-900/90 border border-slate-800 rounded-2xl shadow-2xl overflow-hidden backdrop-blur-md">
+        {pendingInviteCode && (
+          <div className="bg-amber-500/10 border-b border-amber-500/20 px-4 py-3 flex items-center gap-2.5 text-amber-300 text-xs font-semibold">
+            <Sparkles className="w-4 h-4 text-amber-400 flex-shrink-0 animate-pulse" />
+            <span>
+              You&apos;ve been invited to join group <strong className="text-amber-400 font-mono tracking-wider">{pendingInviteCode}</strong>! Log in or create an account to accept.
+            </span>
+          </div>
+        )}
+
         {/* Mode Switcher Tabs */}
         <div className="grid grid-cols-2 border-b border-slate-800 bg-slate-950/40">
           <button

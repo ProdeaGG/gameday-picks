@@ -74,11 +74,19 @@ export default function GroupsPage() {
   };
 
   useEffect(() => {
+    try {
+      const pendingCode = localStorage.getItem('pending_invite_code');
+      if (pendingCode) {
+        router.push(`/join/${pendingCode}`);
+        return;
+      }
+    } catch {}
+
     fetchData();
     const handler = () => fetchData();
     window.addEventListener('gameday-sandbox-updated', handler);
     return () => window.removeEventListener('gameday-sandbox-updated', handler);
-  }, []);
+  }, [router]);
 
   const handleCreateGroup = async (e: React.FormEvent) => {
     e.preventDefault();
